@@ -1,0 +1,457 @@
+// ==== READ BÁSICO ===
+// Liste todos os Pokémon ordenados por dex crescente.
+db.pokemon.find().sort({dex: 1})
+db.pokemon.find({}, {dex: 1}).sort({dex: 1}) // mostra apenas o campo dex
+
+// Liste somente name e types dos Pokémon (sem _id).
+db.pokemon.find({}, {_id: 0, name: 1, types: 1})
+
+// Pegue os 3 Pokémon com maior base_stats.spe (velocidade), mostrando name e base_stats.spe.
+db.pokemon.find(
+    {},
+    {_id: 0, name: 1, "base_stats.spe": 1}
+).sort({"base_stats.spe": -1}
+).limit(3)
+
+// Liste treinadores is_competing: true, exibindo apenas username, region.name e league.name.
+db.trainers.find(
+    {is_competing: true},
+    {_id: 0, username: 1, "region.name": 1, "league.nome": 1}
+)
+
+// Liste treinadores de Kanto ordenados por age decrescente.
+db.trainers.find(
+    {"region.name": "Kanto"},
+    {_id: 0, username: 1, age: 1}
+).sort({age: -1})
+
+// === FILTROS NUMÉRICOS E BOOLEANOS ===
+// Pokémon com catch_rate >= 100
+db.pokemon.find(
+    {catch_rate: {$gte: 100}},
+    {_id: 0, name: 1}
+)
+
+// Pokémon com base_stats.atk > 100.
+db.pokemon.find(
+    {"base_stats.atk": {$gt: 100}},
+    {_id: 0, name: 1, "base_stats.atk": 1}
+)
+
+// Pokémon lendários (is_legendary: true) e mostre name e catch_rate.
+db.pokemon.find(
+    {is_legendary: true},
+    {_id: 0, name: 1, catch_rate: 1}
+)
+
+// Treinadores com age entre 16 e 22 (incluindo limites).
+db.trainers.find({
+    age: {$gte: 16, $lte: 22}}, 
+    {_id: 0, username: 1, age: 1}
+)
+
+// Treinadores com rating existente e rating >= 9.0.
+db.trainers.find({
+    rating: {$exists: true, $gte: 9}},
+    {_id: 0, username: 1, rating: 1}
+)
+
+// === OPERADORES LÓGICOS ===
+// Pokémon que sejam Water OU Electric ($or).
+db.pokemon.find({
+    $or: [
+        {types: "Water"},
+        {types: "Electric"}
+    ]
+})
+
+// Pokémon que sejam Rock E Ground (use AND implícito e depois refaça com $and).
+db.pokemon.find({
+    types: ["Rock", "Ground"]
+})
+
+db.pokemon.find({
+    $and: [
+        {types: "Rock"},
+        {types: "Ground"}
+    ]
+})
+
+// Treinadores que sejam de Kanto OU Sinnoh, mas não tenham is_competing: false (brinque com $not ou $nor).
+db.trainers.find({
+    is_competing: true,
+    $or: [
+        {"region.name": "Kanto"},
+        {"region.name": "Sinnoh"}
+    ]  
+}, {_id: 0, username: 1})
+
+// Treinadores que não tenham league.gyms_required < 8 (use $not com operador numérico).
+db.trainers.find({
+    "league.gyms_required": {$not: {
+        $lt: 8
+    }}
+}, {_id: 0, username: 1})
+
+// Mostre treinadores que não sejam ash, misty e brock usando $nor.
+db.trainers.find({
+    username: {$nin: [
+        "ash", "misty", "brock"
+    ]}
+}, {_id: 0, username: 1})
+
+db.trainers.find({
+    $nor: [
+        {username: "ash"},
+        {username: "misty"},
+        {username: "brock"}
+    ]
+}, {_id: 0, username: 1})
+
+// ==== $exists e $type ====
+// Encontre Pokémon que tenham held_item ($exists: true).
+db.pokemon.find({
+    held_item: {$exists: true}
+})
+
+// Encontre treinadores que não tenham contact.phone ($exists: false).
+db.trainers.find({
+    "contact.phone": {$exists: false}
+})
+
+// Liste treinadores cujo contact.phone seja string.
+db.trainers.find({
+    "contact.phone": {$type: "string"}
+}, {_id: 0, username: 1, contact: 1})
+
+// Liste treinadores cujo contact.phone seja number.
+db.trainers.find({
+    "contact.phone": {$type: "number"}
+}, {_id: 0, username: 1, contact: 1})
+
+// Encontre documentos onde side_job exista.
+db.trainers.find({
+    side_job: {$exists: true}
+})
+
+// === Arrays — $in, $nin, $all, $size ===
+// Pokémon com types contendo Psychic ($in).
+db.pokemon.find({
+    types: {$in: ['Psychic']}
+})
+
+// Pokémon que não contenham Water nem Electric ($nin).
+db.pokemon.find({
+    types: {$nin: ['Water', 'Electric']}
+})
+
+// Pokémon que tenham exatamente 2 tipos (dica: types + $size).
+db.pokemon.find({
+    $expr: {
+        $eq: [
+            {$size: "$types"}, 2
+        ]
+    }
+}, {_id: 0, name: 1, types: 1})
+
+// Treinadores com team de tamanho 2.
+db.trainers.find({
+    $expr: {
+        $eq: [
+            {$size: "$team"}, 2
+        ]
+    }
+}, {_id: 0, username: 1, team: 1})
+
+// Pokémon com abilities contendo "Sturdy".
+db.pokemon.find({
+    abilities: {$in: ['Sturdy']}
+})
+
+// === Arrays de objetos — $elemMatch e filtros com “pontinho” ===
+// Treinadores que tenham algum Pokémon no team com level >= 70.
+db.trainers.find({
+    "team.level": {$gte: 70}
+}, {_id: 0, username: 1, "team.level": 1})
+
+// Treinadores que tenham algum Pokémon cujo moves contenha "Recover".
+db.trainers.find({
+    "team.moves": {$in: ['Recover']}
+}, {_id: 0, username: 1, "team.moves": 1})
+
+// Use $elemMatch para achar treinadores cujo team tenha um Pokémon com: dex: 25 e level > 60 no mesmo elemento.
+db.trainers.find({
+    team: {$elemMatch: {
+        dex: 25,
+        level: {$gt: 60}
+    }}
+})
+
+// Em training_rolls, encontre documentos cujo array ivs tenha algum valor entre 90 e 94 (inclusive) usando $elemMatch.
+db.training_rolls.find({
+    ivs: {$elemMatch: {
+        $gte: 90, $lte: 94
+    }}
+})
+
+// Em trainers, encontre quem tenha uma badge com city: "Cerulean".
+db.trainers.find({
+    "badges.city": "Cerulean"
+})
+
+// === Regex e busca textual simples ===
+// Pokémon cujo name termine com "chu" (case-insensitive).
+db.pokemon.find({
+    name: /^[a-z]+chu$/i
+})
+
+// Pokémon cujo name comece com "Sta" (case-insensitive).
+db.pokemon.find({
+    name: /^sta+[a-z]+$/i
+})
+
+// Treinadores cujo contact.email termine com .io.
+db.trainers.find({
+    "contact.email": /^[a-z]+@[a-z]+\.io$/
+})
+
+// Treinadores que tenham algum move contendo "Beam" (case-insensitive).
+db.trainers.find({
+    team: {$elemMatch: {
+        moves: /[a-z]+ beam/i
+    }}
+})
+
+// Pokémon cujo evolution.method contenha "trade" (regex em array de objetos).
+db.pokemon.find({
+    evolution: {$elemMatch: {
+        method: /trade/i
+    }}
+})
+
+// CRUD — INSERT (Create)
+// Insira um novo Pokémon (dex 133, Eevee) com campos coerentes (types, base_stats etc.).
+db.pokemon.insertOne({
+    dex: 133,
+    name: "Eevee",
+    types: ["Normal"],
+    base_stats: {hp: 55, atk: 55, def: 50, spa: 45, spd: 65, spe: 55},
+    abilities: ['Run Away', 'Adaptability', 'Anticipation'],
+    evolution: [
+        {to: 'Vaporeon', level: null, method: 'Water Stone'},
+        {to: 'Flareon', level: null, method: 'Fire Stone'},
+        {to: 'Jolteon', level: null, method: 'Thunder Stone'},
+        {to: 'Umbreon', level: null, method: 'Happiness + Night'},
+        {to: 'Espeon', level: null, method: 'Happiness + Day'},
+        {to: 'Leafeon', level: null, method: 'Leaf Stone'},
+        {to: 'Glaceon', level: null, method: 'Ice Stone'},
+        {to: 'Sylveon', level: null, method: 'Happiness + Fairy Move'}
+    ],
+    catch_rate: 120,
+    is_legendary: false,
+    introduced_at: new Date(27, 1, 1996)
+})
+
+// Insira um novo treinador username: "gary" com: region completa, team com pelo menos 1 Pokémon, contact.email
+db.trainers.insertOne({
+    username: 'gary',
+    age: 19,
+    is_competing: true,
+    region: {name: 'Kanto', city: 'Viridian City'},
+    contact: {email: 'gary@knato.net'},
+    league: {name: 'Indigo', gyms_required: 8},
+    badges: [{
+        name: 'Earth',
+        city: 'Viridian',
+        earned_at :new Date(9, 8, 2024)
+    }],
+    team: [
+        {
+            dex: 18,
+            nickname: 'Pidgeot',
+            level: 56,
+            moves: ['Quick Attack', 'Whirlwind', 'Wing Attack', 'Mirrom Move'],
+            caught_at: new Date(1, 4, 2020)
+        },
+        {
+            dex: 65,
+            nickname: 'Alakazam',
+            level: 54,
+            moves: ['Disable', 'Recover', 'Psychic', 'Reflect'],
+            caught_at: new Date(1, 4, 2020)
+        },
+        {
+            dex: 112,
+            nickname: 'Rhydon',
+            level: 56,
+            moves: ['Fury Attack', 'Sandstorm', 'Rock Slide', 'Earthquake'],
+            caught_at: new Date(1, 4, 2020)
+        },
+        {
+            dex: 130,
+            nickname: 'Gyarados',
+            level: 58,
+            moves: ['Twister', 'Hydro Pump', 'Rain Dance', 'Hyper Beam'],
+            caught_at: new Date(1, 4, 2020)
+        },
+        {
+            dex: 103,
+            nickname: 'Exeggutor',
+            level: 58,
+            moves: ['Sunny Day', 'Leech Seed', 'Egg Bomb', 'Solar Beam'],
+            caught_at: new Date(1, 4, 2020)
+        },
+        {
+            dex: 59,
+            nickname: 'Arcanine',
+            level: 58,
+            moves: ['Roar', 'Swift', 'Flamethrower', 'Extremespeed'],
+            caught_at: new Date(1, 4, 2020)
+        }
+    ]
+})
+
+// === CRUD — UPDATE (Update) ===
+// Atualize o held_item do Squirtle para "Mystic Water" usando $set.
+db.pokemon.updateOne(
+    {name: 'Squirtle'},
+    {$set: {
+        held_item: 'Mystic Water'
+    }}
+)
+
+// Adicione um novo tipo "Fairy" ao Pokémon que você inseriu (Eevee) usando $push.
+db.pokemon.updateOne(
+    {name: 'Eevee'},
+    {$set: {
+        types: ['Normal', 'Fairy']
+    }}
+)
+
+db.pokemon.updateOne(
+    {name: 'Eevee'},
+    {$push: {
+        types: 'Fairy'
+    }}
+)
+
+// Remova "Smokescreen" do array moves do Pokémon do Ash que tem dex: 4 (use $pull).
+db.trainers.updateOne(
+    {
+        "team.dex": 4,
+        username: "ash"
+    },
+    {$pull: {
+        // varre todo o array
+        "team.$.moves": 'Smokescreen'
+    }}
+)
+
+// Aumente em +5 o level do Pikachu do red (use $inc e filtro correto).
+db.trainers.updateOne({
+    username: 'red',
+    "team.dex": 25
+}, {
+    $inc: {
+        "team.$.level": 5
+    }
+})
+
+// Use updateMany para marcar todos os treinadores de Kanto com tag: "kanto".
+db.trainers.updateMany({
+    "region.name": "Kanto"
+}, {
+    $set: {
+        tag: "kanto"
+    }
+})
+
+// === CRUD — DELETE (Delete) ===
+// Apague o treinador brock (deleteOne).
+db.trainers.deleteOne({
+    username: "brock"
+})
+
+// Apague todos os training_rolls com pokemon_dex: 25 (deleteMany).
+db.training_rolls.deleteMany({
+    pokemon_dex: 25
+})
+
+// Apague o Pokémon com dex: 445.
+db.pokemon.deleteOne({
+    dex: 445
+})
+
+// === Projeção e “limpeza” de retorno ===
+// Traga apenas username e o tamanho do time (dica: nessa parte dá pra usar agregação, mas tente primeiro só projeção simples; depois você faz a versão avançada na seção 13).
+db.trainers.find({}, {
+    _id: 0, username: 1, team_size: {$size: "$team"}
+})
+
+// Liste Pokémon mostrando apenas: name, base_stats.atk, base_stats.spe
+db.pokemon.find({}, {
+    _id: 0, name: 1, "base_stats.atk": 1, "base_stats.spe": 1
+})
+
+// Liste treinadores escondendo contact por completo (excluir campo).
+db.trainers.find({}, {
+    contact: 0
+})
+
+// === Consultas com $expr (comparações inteligentes) ===
+// Treinadores com pelo menos 3 Pokémon no time usando $expr + $size.
+db.trainers.find({
+    $expr: {
+        $gte: [
+            {$size: "$team"}, 3
+        ]
+    }
+}, {_id: 0, username: 1, team_size: {$size: "$team"}})
+
+// Treinadores cuja age seja maior que league.gyms_required.
+db.trainers.find({
+    $expr: {$gt: ["$age", "$league.gyms_required"]}
+}, {_id: 0, username: 1, age: 1, "league.gyms_required": 1})
+
+// Pokémon onde base_stats.atk seja maior que base_stats.def.
+db.pokemon.find({
+    $expr: {$gt: ["$base_stats.atk", "$base_stats.def"]}
+}, {_id: 0, name: 1})
+
+// === Desafios finais (mistura tudo) ===
+// Encontre treinadores que: sejam is_competing: true, tenham pelo menos 1 Pokémon com level >= 60 e tenham contact.discord existente
+db.trainers.find({
+    is_competing: true,
+    "contact.discord": {$exists: true},
+    team: {$elemMatch: {
+        level: {$gte: 60}
+    }}
+}, {
+    _id: 0, username: 1, is_competing: 1, contact: 1, "team.level": 1
+})
+
+// Encontre Pokémon que: tenham 2 tipos, não sejam lendários, e tenham catch_rate >= 60
+db.pokemon.find({
+    is_legendary: false,
+    catch_rate: {$gte: 60},
+    $expr: {
+        $eq: [{$size: "$types"}, 2]
+    }
+}, {_id: 0, name: 1, is_legendary: 1, catch_rate: 1, types: 1}
+)
+
+// Crie um campo power em todos os Pokémon calculado como: hp + atk + def + spa + spd + spe
+db.pokemon.find({}, {
+    _id: 0,
+    name: 1,
+    power: {
+        $add: [
+            "$base_stats.hp",
+            "$base_stats.atk",
+            "$base_stats.def",
+            "$base_stats.spa",
+            "$base_stats.spd",
+            "$base_stats.spe"
+        ]
+    }
+})

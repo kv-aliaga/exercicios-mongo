@@ -1,0 +1,295 @@
+// 1. Liste todos os Pokémon mostrando apenas `name`, `dex` e `catch_rate` usando um pipeline de agregação.
+db.pokemon.aggregate([
+    {$group: {
+        _id: '$name',
+        'dex': {$sum: '$dex'},
+        'catch_rate': {$sum: '$catch_rate'}
+    }},
+    {$sort: {'dex': 1}}
+])
+
+// 2. Mostre apenas `username`, `age` e `region.name` de todos os treinadores usando `$project`.
+db.trainers.aggregate([
+    {$project: {
+        'username': 1,
+        'age': 1,
+        'region.name': 1,
+        '_id': 0
+    }}
+])
+
+// 4. Conte quantos Pokémon existem na coleção `pokemon`.
+db.pokemon.find().count()
+
+// 9. Liste os 3 Pokémon com maior `catch_rate`.
+db.pokemon.find(
+    {}, {_id: 0, name:1, catch_rate:1}
+).sort({
+    catch_rate: -1
+}).limit(3)
+
+// 10. Liste os 2 treinadores mais velhos.
+db.trainers.find(
+    {},
+    {_id: 0, username: 1, age: 1}
+).sort({
+    age: -1
+}).limit(2)
+
+// 19. Agrupe os Pokémon por `is_legendary` e conte quantos existem em cada grupo.
+db.pokemon.aggregate([
+    {$sortByCount: '$is_legendary'}
+])
+
+// 20. Agrupe os treinadores por `region.name` e conte quantos treinadores existem em cada região.
+db.trainers.aggregate([
+    {$sortByCount: '$region.name'}
+])
+
+// 21. Agrupe os registros de `training_rolls` por `method` e conte quantos existem em cada método.
+db.training_rolls.aggregate([
+    {$sortByCount: '$method'}
+])
+
+// 22. Agrupe os Pokémon por `catch_rate` e mostre quantos Pokémon existem para cada valor.
+db.pokemon.aggregate([
+    {$sortByCount: '$catch_rate'}
+])
+
+// 23. Mostre quantos Pokémon existem por quantidade de tipos, considerando o tamanho do array `types`.
+db.pokemon.aggregate([
+    {$sortByCount: {$size: '$types'}}
+])
+
+// 24. Mostre quantos treinadores existem por quantidade de Pokémon no time, considerando o tamanho do array `team`.
+db.trainers.aggregate([
+    {$sortByCount: {$size: '$team'}}
+])
+
+// 25. Mostre quantos treinadores existem por quantidade de badges, considerando o tamanho do array `badges`.
+db.trainers.aggregate([
+    {$sortByCount: {$size: '$badges'}}
+])
+
+// 26. Calcule a média de `catch_rate` dos Pokémon por valor de `is_legendary`.
+db.pokemon.aggregate([
+    {$group: {
+        _id: '$is_legendary',
+        'avg_catch_rate': {$avg: '$catch_rate'}
+    }},
+    {$sort: {'avg_catch_rate': -1}},
+])
+
+// 27. Calcule a média de idade dos treinadores por região.
+db.trainers.aggregate([
+    {$group: {
+        _id: '$region.name',
+        'avg_age': {$avg: '$age'}
+    }},
+    {$sort: {'avg_age': -1}},
+])
+
+// 28. Identifique a região que possui mais treinadores.
+db.trainers.aggregate([
+    {$sortByCount: '$region.name'},
+    {$limit: 1}
+])
+
+// 29. Identifique o método mais frequente na coleção `training_rolls`.
+db.training_rolls.aggregate([
+    {$sortByCount: '$method'},
+    {$limit: 1}
+])
+
+// 30. Mostre os Pokémon do tipo `Electric` ordenados por `base_stats.spe` da maior para a menor.
+db.pokemon.find({
+    types: {$in: ['Electric']}
+}).sort({
+    'base_stats.spe': -1
+})
+
+
+// 31. Mostre os Pokémon com `catch_rate` maior que 100, ordenados do maior para o menor.
+db.pokemon.find({
+    catch_rate: {$gt: 100}
+}, {
+    _id: 0,
+    name: 1,
+    catch_rate: 1
+}).sort({
+    'catch_rate': -1
+})
+
+// 32. Conte quantos treinadores da região `Kanto` estão competindo.
+db.trainers.find({
+    'region.name': 'Kanto',
+    is_competing: true
+}).count()
+
+// 33. Agrupe os treinadores por `league.name` e calcule a média de `age` em cada liga.
+db.trainers.aggregate([
+    {$group: {
+        _id: '$league.name',
+        'avg_age': {$avg: '$age'}
+    }}
+])
+
+// 34. Mostre quantos Pokémon possuem exatamente 2 tipos.
+db.pokemon.find({
+    $expr: {
+        $eq: [
+            {$size: "$types"}, 2
+        ]
+    }
+}, {_id: 0, name: 1, types: 2})
+
+// 35. Mostre quantos treinadores possuem exatamente 2 Pokémon no time.
+db.trainers.find({
+    $expr: {
+        $eq: [
+            {$size: "$team"}, 2
+        ]
+    }
+}, {_id: 0, username: 1, team: 2})
+
+// 36. Mostre quantos treinadores possuem exatamente 1 badge.
+db.trainers.find({
+    $expr: {
+        $eq: [
+            {$size: "$badges"}, 2
+        ]
+    }
+}, {_id: 0, username: 1, badges: 2})
+
+// 37. Agrupe os Pokémon por ano de `introduced_at` e conte quantos foram introduzidos em cada ano.
+db.pokemon.aggregate([
+    {$group: {
+        _id: {$year: '$introduced_at'},
+        'qtd': {$count: {}}
+    }}
+])
+
+
+// 38. Calcule a soma total de `catch_rate` agrupando os Pokémon por quantidade de tipos.
+db.pokemon.aggregate([
+    {$group: {
+        _id: {$size: '$types'},
+        'sum_catch_rate': {$sum: '$catch_rate'}
+    }}
+])
+]
+// ## Avançado
+
+// 41. Desconstrua o array `types` e crie um ranking dos tipos de Pokémon mais frequentes.
+db.pokemon.aggregate([
+    {$unwind: '$types'},
+    {$sortByCount: '$types'}
+])
+
+// 42. Desconstrua o array `abilities` e mostre quantas vezes cada habilidade aparece na coleção `pokemon`.
+db.pokemon.aggregate([
+    {$unwind: '$abilities'},
+    {$sortByCount: '$abilities'}
+])
+
+// 43. Desconstrua o array `evolution` e mostre quantas vezes cada `evolution.method` aparece.
+db.pokemon.aggregate([
+    {$unwind: '$evolution'},
+    {$sortByCount: '$evolution.method'}
+])
+
+// 44. Desconstrua o array `team` e conte quantos Pokémon existem somando todos os times dos treinadores.
+db.trainers.aggregate([
+    {$unwind: '$team'},
+    {$group: {
+        _id: '$username',
+        'qtd': {$count: {}}
+    }},
+    {$group: {
+        _id: 1
+        'pokemon nos times': {$sum: '$qtd'}
+    }}
+])
+
+
+// 45. Desconstrua o array `team` e crie um ranking dos `team.dex` mais usados pelos treinadores.
+db.trainers.aggregate([
+    {$unwind: '$team'},
+    {$sortByCount: '$team.dex'},
+    {$match: {count: {$gte: 2}}}
+])
+
+// 46. Desconstrua o array `team` e calcule a média de `team.level` por treinador.
+db.trainers.aggregate([
+    {$unwind: '$team'},
+    {$group: {
+        _id: '$username',
+        'avg_team_level': {$avg: '$team.level'}
+    }}
+])
+
+// 47. Desconstrua o array `team` e identifique qual treinador possui o maior nível individual de Pokémon no time
+db.trainers.aggregate([
+    {$unwind: '$team'},
+    {$sort: {'team.level': -1}},
+    {$limit: 1},
+    {$project: {username: 1, _id:0}}
+])
+
+
+// 48. Desconstrua o array `team.moves` e mostre quantas vezes cada golpe aparece em todos os times.
+db.trainers.aggregate([
+    {$unwind: '$team'},
+    {$unwind: '$team.moves'},
+    {$sortByCount: '$team.moves'}
+])
+
+// 49. Desconstrua o array `badges` e conte quantas badges foram conquistadas no total.
+db.trainers.aggregate([
+    {$unwind: '$badges'},
+    {$sortByCount: '$badges.name'}
+])
+
+// 50. Desconstrua o array `badges` e crie um ranking das cidades que mais aparecem em badges conquistadas.
+db.trainers.aggregate([
+    {$unwind: '$badges'},
+    {$sortByCount: '$badges.city'}
+])
+
+
+// 51. Desconstrua o array `notes` e conte quantas anotações existem no total entre os treinadores.
+db.trainers.aggregate([
+    {$unwind: '$notes'},
+    {$group: {
+        _id: '$username',
+        'total_notes': {$count: {}}
+    }}
+])
+
+
+// 52. Desconstrua o array `ivs` e calcule a média dos valores de IV por `pokemon_dex` na coleção `training_rolls`.
+db.training_rolls.aggregate([
+    {$unwind: '$notes'},
+    {$group: {
+        _id: '$username',
+        'total_notes': {$count: {}}
+    }}
+])
+
+
+// 53. Desconstrua o array `ivs` e identifique qual `pokemon_dex` possui o maior valor individual de IV registrado.
+db.training_rolls.aggregate([
+    {$unwind: '$ivs'},
+    {$group: {
+        _id: '$pokemon_dex',
+        'maior_iv': {$max: '$ivs'}
+    }}
+])
+
+
+// 54. Desconstrua o array `team`, agrupe por `team.dex` e use ordenação e limite para mostrar os 5 Pokémon mais presentes nos times dos treinadores.
+db.trainers.aggregate([
+    {$unwind: '$team'},
+    {$sortByCount: '$team.dex'},
+    {$limit: 5}
+])
